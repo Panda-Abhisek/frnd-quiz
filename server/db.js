@@ -1,14 +1,15 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 
-// PostgreSQL for both development and production
-console.log('Using PostgreSQL database');
+// PostgreSQL (Neon-compatible) for both development and production
+console.log('Using PostgreSQL database with URL:', process.env.DATABASE_URL ? 'set' : 'NOT SET');
+
+const isLocal = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('localhost');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('localhost') ? false : {
-    rejectUnauthorized: false
-  }
+  // Neon requires SSL; disable SSL only for local connections
+  ssl: isLocal ? false : { rejectUnauthorized: false }
 });
 
 // Create table if it doesn't exist
