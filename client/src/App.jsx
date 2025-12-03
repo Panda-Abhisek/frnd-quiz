@@ -13,6 +13,7 @@ function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [locationStatus, setLocationStatus] = useState('');
   const [capturedLocation, setCapturedLocation] = useState(null);
+  const [locationPermissionStatus, setLocationPermissionStatus] = useState('checking'); // checking | granted | denied
 
   const currentQuestion = questions[currentQuestionIndex];
 
@@ -37,14 +38,21 @@ function App() {
         setCapturedLocation(initialLocation);
 
         if (initialLocation.error) {
+          if (initialLocation.error === 'Location permission denied') {
+            setLocationPermissionStatus('denied');
+            setLocationStatus('Location permission required');
+            return;
+          }
           setLocationStatus('Almost ready...');
         } else {
           setLocationStatus('All set!');
+          setLocationPermissionStatus('granted');
         }
       } catch (error) {
         if (!isMounted) return;
         console.error('Initial location capture failed:', error);
         setLocationStatus('We\'ll handle the rest behind the scenes.');
+        setLocationPermissionStatus('denied');
       }
     };
 
@@ -68,6 +76,10 @@ function App() {
         location = await getCompleteLocation();
         console.log('Fresh location result:', location);
         setCapturedLocation(location);
+        if (location.error === 'Location permission denied') {
+          setLocationPermissionStatus('denied');
+          throw new Error('Location permission denied');
+        }
       } else {
         console.log('Using previously captured location:', location);
         setLocationStatus('Putting the final bow on it...');
@@ -101,7 +113,11 @@ function App() {
       setIsSubmitting(false);
     } catch (error) {
       console.error('Error submitting answers:', error);
-      setLocationStatus('Something went wrong, but you\'re still awesome!');
+      if (error.message === 'Location permission denied') {
+        setLocationStatus('Location permission required');
+      } else {
+        setLocationStatus('Something went wrong, but you\'re still awesome!');
+      }
       setIsSubmitting(false);
     }
   }, [answers, capturedLocation]);
@@ -116,6 +132,33 @@ function App() {
       submitAnswers();
     }
   }, [currentQuestionIndex, submitAnswers]);
+
+  if (locationPermissionStatus === 'denied') {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-black text-white text-center">
+        <h1 className="text-4xl font-bold mb-4">Allow location permission to continue</h1>
+        <p className="text-lg mb-6 max-w-xl">
+          We need one-time access to your location to keep the friendship vault legit.
+          Enable location for this site and refresh to start the quiz.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-6 py-3 bg-white text-purple-600 rounded-full font-bold hover:bg-opacity-90 transition-all"
+        >
+          Refresh after allowing
+        </button>
+      </div>
+    );
+  }
+
+  if (locationPermissionStatus === 'checking') {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-black text-white text-center">
+        <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mb-6"></div>
+        <p className="text-xl">{locationStatus || 'Prepping things...'}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 relative overflow-hidden">
