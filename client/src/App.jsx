@@ -80,8 +80,8 @@ function App() {
         setLocationStatus('Everything looks good—sending now!');
       }
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-      console.log('Submitting to:', apiUrl, 'with location:', location);
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      console.log('Submitting to:', apiUrl || '[same origin]', 'with location:', location);
       const response = await fetch(`${apiUrl}/api/submit`, {
         method: 'POST',
         headers: {
