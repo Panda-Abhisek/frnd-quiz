@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import QuizCard from './components/QuizCard';
 import FeedbackOverlay from './components/FeedbackOverlay';
@@ -14,6 +14,7 @@ function App() {
   const [locationStatus, setLocationStatus] = useState('');
   const [capturedLocation, setCapturedLocation] = useState(null);
   const [locationPermissionStatus, setLocationPermissionStatus] = useState('checking'); // checking | granted | denied
+  const isMountedRef = useRef(true);
 
   const currentQuestion = questions[currentQuestionIndex];
 
@@ -25,43 +26,40 @@ function App() {
     setShowFeedback(true);
   }, [currentQuestion.id]);
 
-  useEffect(() => {
-    let isMounted = true;
+  const requestInitialLocation = React.useCallback(async () => {
+    setLocationStatus('Getting things set up...');
+    try {
+      const initialLocation = await getCompleteLocation();
+      if (!isMountedRef.current) return;
 
-    const requestInitialLocation = async () => {
-      setLocationStatus('Getting things set up...');
-      try {
-        const initialLocation = await getCompleteLocation();
-        if (!isMounted) return;
+      console.log('Initial location result:', initialLocation);
+      setCapturedLocation(initialLocation);
 
-        console.log('Initial location result:', initialLocation);
-        setCapturedLocation(initialLocation);
-
-        if (initialLocation.error) {
-          if (initialLocation.error === 'Location permission denied') {
-            setLocationPermissionStatus('denied');
-            setLocationStatus('Location permission required');
-            return;
-          }
-          setLocationStatus('Almost ready...');
-        } else {
-          setLocationStatus('All set!');
-          setLocationPermissionStatus('granted');
+      if (initialLocation.error) {
+        if (initialLocation.error === 'Location permission denied') {
+          setLocationPermissionStatus('denied');
+          setLocationStatus('Location permission required');
+          return;
         }
-      } catch (error) {
-        if (!isMounted) return;
-        console.error('Initial location capture failed:', error);
-        setLocationStatus('We\'ll handle the rest behind the scenes.');
-        setLocationPermissionStatus('denied');
+        setLocationStatus('Almost ready...');
+      } else {
+        setLocationStatus('All set!');
+        setLocationPermissionStatus('granted');
       }
-    };
-
-    requestInitialLocation();
-
-    return () => {
-      isMounted = false;
-    };
+    } catch (error) {
+      if (!isMountedRef.current) return;
+      console.error('Initial location capture failed:', error);
+      setLocationStatus('We\'ll handle the rest behind the scenes.');
+      setLocationPermissionStatus('denied');
+    }
   }, []);
+
+  useEffect(() => {
+    requestInitialLocation();
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [requestInitialLocation]);
 
   const submitAnswers = React.useCallback(async () => {
     console.log("All Answers Collected:", answers);
@@ -133,6 +131,13 @@ function App() {
     }
   }, [currentQuestionIndex, submitAnswers]);
 
+  const handleRetryLocation = React.useCallback(() => {
+    setLocationPermissionStatus('checking');
+    setLocationStatus('Trying again...');
+    setCapturedLocation(null);
+    requestInitialLocation();
+  }, [requestInitialLocation]);
+
   if (locationPermissionStatus === 'denied') {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-black text-white text-center">
@@ -142,10 +147,10 @@ function App() {
           Enable location for this site and refresh to start the quiz.
         </p>
         <button
-          onClick={() => requestInitialLocation()}
+          onClick={handleRetryLocation}
           className="px-6 py-3 bg-white text-purple-600 rounded-full font-bold hover:bg-opacity-90 transition-all"
         >
-          Refresh after allowing
+          Retry after allowing
         </button>
       </div>
     );
