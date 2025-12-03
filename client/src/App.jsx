@@ -156,14 +156,7 @@ function App() {
     );
   }
 
-  if (locationPermissionStatus === 'checking') {
-    return (
-      <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-black text-white text-center">
-        <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mb-6"></div>
-        <p className="text-xl">{locationStatus || 'Prepping things...'}</p>
-      </div>
-    );
-  }
+
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 relative overflow-hidden">
