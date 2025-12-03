@@ -142,7 +142,7 @@ function App() {
           Enable location for this site and refresh to start the quiz.
         </p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => requestInitialLocation()}
           className="px-6 py-3 bg-white text-purple-600 rounded-full font-bold hover:bg-opacity-90 transition-all"
         >
           Refresh after allowing
